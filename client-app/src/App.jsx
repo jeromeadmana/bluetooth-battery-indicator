@@ -83,6 +83,11 @@ function App() {
                               </div>
                               <div className="text-xs text-gray-500 mt-0.5">
                                 {device.icon.charAt(0).toUpperCase() + device.icon.slice(1)}
+                                {device.bluetoothVersion && (
+                                  <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md font-medium">
+                                    {device.bluetoothVersion}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>

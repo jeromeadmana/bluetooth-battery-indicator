@@ -16,6 +16,7 @@ namespace BluetoothBatteryMonitor.Services
         public int? BatteryLevel { get; set; }
         public bool IsConnected { get; set; }
         public string Icon { get; set; } = "bluetooth"; // Default icon
+        public string? BluetoothVersion { get; set; } // BLE, Classic, or version number
     }
 
     public class BluetoothService
@@ -26,7 +27,7 @@ namespace BluetoothBatteryMonitor.Services
 
             // Find all PAIRED Bluetooth devices
             // We use the AQS selector for Bluetooth devices
-            try 
+            try
             {
                 string aqs = BluetoothDevice.GetDeviceSelector();
                 var deviceCollection = await DeviceInformation.FindAllAsync(aqs);
@@ -52,7 +53,8 @@ namespace BluetoothBatteryMonitor.Services
                             Name = devInfo.Name,
                             IsConnected = isConnected,
                             BatteryLevel = battery,
-                            Icon = GetIconForDevice(device.ClassOfDevice) 
+                            Icon = GetIconForDevice(device.ClassOfDevice),
+                            BluetoothVersion = await GetBluetoothVersionAsync(device, devInfo)
                         });
                     }
                     catch (Exception ex)
@@ -71,13 +73,85 @@ namespace BluetoothBatteryMonitor.Services
 
         private async Task<int?> GetBatteryLevelAsync(BluetoothDevice device)
         {
-            // For Bluetooth LE devices, try to read battery via GATT
+            // Method 1: Try Windows Device Properties first (most reliable for many devices)
             try
             {
-                // Try to get the device as a Bluetooth LE device
+                var deviceInfo = await DeviceInformation.CreateFromIdAsync(device.DeviceId);
+                if (deviceInfo != null)
+                {
+                    // Try multiple battery-related properties
+                    var batteryProperties = new[]
+                    {
+                        "System.Devices.BatteryLevel",
+                        "System.Devices.Battery.Level",
+                        "System.Devices.Aep.IsBatteryLevelAvailable",
+                        "System.Devices.Aep.BatteryLevel"
+                    };
+
+                    foreach (var prop in batteryProperties)
+                    {
+                        if (deviceInfo.Properties.ContainsKey(prop))
+                        {
+                            var value = deviceInfo.Properties[prop];
+                            if (value != null)
+                            {
+                                if (int.TryParse(value.ToString(), out int level) && level >= 0 && level <= 100)
+                                {
+                                    Console.WriteLine($"Battery level for {device.Name} from {prop}: {level}%");
+                                    return level;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading device properties: {ex.Message}");
+            }
+
+            // Method 2: Try Windows.Devices.Power.Battery API
+            try
+            {
+                // Query for battery devices associated with this Bluetooth device
+                var batterySelector = Battery.GetDeviceSelector();
+                var batteries = await DeviceInformation.FindAllAsync(batterySelector);
+
+                foreach (var batteryDevInfo in batteries)
+                {
+                    // Check if this battery is associated with our Bluetooth device
+                    if (batteryDevInfo.Id.Contains(device.DeviceId.Split('#').LastOrDefault() ?? "") ||
+                        batteryDevInfo.Name.Contains(device.Name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var battery = await Battery.FromIdAsync(batteryDevInfo.Id);
+                        if (battery != null)
+                        {
+                            var report = battery.GetReport();
+                            if (report != null && report.FullChargeCapacityInMilliwattHours.HasValue &&
+                                report.RemainingCapacityInMilliwattHours.HasValue &&
+                                report.FullChargeCapacityInMilliwattHours.Value > 0)
+                            {
+                                int level = (int)((double)report.RemainingCapacityInMilliwattHours.Value /
+                                                 report.FullChargeCapacityInMilliwattHours.Value * 100);
+                                Console.WriteLine($"Battery level for {device.Name} from Battery API: {level}%");
+                                return level;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Battery API read failed for {device.Name}: {ex.Message}");
+            }
+
+            // Method 3: Try GATT for Bluetooth LE devices
+            try
+            {
                 var bleDevice = await BluetoothLEDevice.FromIdAsync(device.DeviceId);
                 if (bleDevice != null)
                 {
+                    Console.WriteLine($"Attempting GATT read for {device.Name} (BLE device)");
                     var gattResult = await bleDevice.GetGattServicesForUuidAsync(GattServiceUuids.Battery);
                     if (gattResult.Status == GattCommunicationStatus.Success && gattResult.Services.Count > 0)
                     {
@@ -94,6 +168,7 @@ namespace BluetoothBatteryMonitor.Services
                                 var reader = Windows.Storage.Streams.DataReader.FromBuffer(valueResult.Value);
                                 byte level = reader.ReadByte();
                                 bleDevice.Dispose();
+                                Console.WriteLine($"Battery level for {device.Name} from GATT: {level}%");
                                 return (int)level;
                             }
                         }
@@ -101,33 +176,60 @@ namespace BluetoothBatteryMonitor.Services
                     bleDevice.Dispose();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Device might not be BLE or doesn't support battery service
+                Console.WriteLine($"GATT read failed for {device.Name}: {ex.Message}");
             }
 
-            // Fallback: Try to get battery info from device properties
+            Console.WriteLine($"No battery info available for {device.Name}");
+            return null;
+        }
+
+
+
+        private async Task<string> GetBluetoothVersionAsync(BluetoothDevice device, DeviceInformation devInfo)
+        {
             try
             {
-                var deviceInfo = await DeviceInformation.CreateFromIdAsync(device.DeviceId);
-                if (deviceInfo != null && deviceInfo.Properties.ContainsKey("System.Devices.BatteryLevel"))
+                // Check if it's a Bluetooth LE device
+                var bleDevice = await BluetoothLEDevice.FromIdAsync(device.DeviceId);
+                if (bleDevice != null)
                 {
-                    var batteryLevel = deviceInfo.Properties["System.Devices.BatteryLevel"];
-                    if (batteryLevel != null && int.TryParse(batteryLevel.ToString(), out int level))
-                    {
-                        return level;
-                    }
+                    bleDevice.Dispose();
+                    return "BLE (4.0+)";
                 }
             }
             catch
             {
-                // Property might not exist
+                // Not a BLE device
             }
 
-            return null; // Battery level not available
+            // Check device properties for Bluetooth version
+            try
+            {
+                if (devInfo.Properties.ContainsKey("System.Devices.Aep.Bluetooth.Le.IsConnectable"))
+                {
+                    var isLE = devInfo.Properties["System.Devices.Aep.Bluetooth.Le.IsConnectable"];
+                    if (isLE != null && (bool)isLE)
+                    {
+                        return "BLE (4.0+)";
+                    }
+                }
+
+                // Check for protocol properties
+                if (devInfo.Properties.ContainsKey("System.Devices.Aep.ProtocolId"))
+                {
+                    var protocolId = devInfo.Properties["System.Devices.Aep.ProtocolId"]?.ToString();
+                    if (protocolId != null && protocolId.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return "Classic (2.0/3.0)";
+                    }
+                }
+            }
+            catch { }
+
+            return "Classic";
         }
-
-
 
         private string GetIconForDevice(BluetoothClassOfDevice classOfDevice)
         {
