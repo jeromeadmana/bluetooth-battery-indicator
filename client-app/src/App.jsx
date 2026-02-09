@@ -178,7 +178,12 @@ function App() {
                         <td className="px-6 py-5 text-center">
                           <button
                             onClick={() => startEdit(device)}
-                            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+                            disabled={!device.isConnected}
+                            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                              device.isConnected
+                                ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            }`}
                           >
                             Rename
                           </button>
