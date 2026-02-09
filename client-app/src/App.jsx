@@ -5,6 +5,8 @@ function App() {
   const [devices, setDevices] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [editingDevice, setEditingDevice] = useState(null)
+  const [newName, setNewName] = useState('')
 
   const fetchDevices = async () => {
     try {
@@ -20,6 +22,41 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRename = async () => {
+    if (!editingDevice) return;
+
+    try {
+      const response = await fetch('/api/battery/rename', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          deviceId: editingDevice.id,
+          newName: newName.trim()
+        })
+      });
+
+      if (response.ok) {
+        await fetchDevices();
+        setEditingDevice(null);
+        setNewName('');
+      }
+    } catch (err) {
+      console.error('Failed to rename device:', err);
+    }
+  };
+
+  const startEdit = (device) => {
+    setEditingDevice(device);
+    setNewName(device.name);
+  };
+
+  const cancelEdit = () => {
+    setEditingDevice(null);
+    setNewName('');
   };
 
   useEffect(() => {
@@ -61,6 +98,9 @@ function App() {
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Progress
+                      </th>
+                      <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -135,6 +175,14 @@ function App() {
                             )}
                           </div>
                         </td>
+                        <td className="px-6 py-5 text-center">
+                          <button
+                            onClick={() => startEdit(device)}
+                            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+                          >
+                            Rename
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -144,6 +192,56 @@ function App() {
           </div>
         </div>
       </div>
+
+      {editingDevice && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Rename Device</h2>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Current Name
+              </label>
+              <p className="text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+                {editingDevice.originalName}
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Name
+              </label>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleRename()}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter new name"
+                autoFocus
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Leave empty to reset to original name
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleRename}
+                className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

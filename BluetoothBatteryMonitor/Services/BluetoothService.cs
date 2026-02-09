@@ -13,6 +13,7 @@ namespace BluetoothBatteryMonitor.Services
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+        public string OriginalName { get; set; } = string.Empty;
         public int? BatteryLevel { get; set; }
         public bool IsConnected { get; set; }
         public string Icon { get; set; } = "bluetooth"; // Default icon
@@ -21,6 +22,13 @@ namespace BluetoothBatteryMonitor.Services
 
     public class BluetoothService
     {
+        private readonly DeviceNameService _nameService;
+
+        public BluetoothService(DeviceNameService nameService)
+        {
+            _nameService = nameService;
+        }
+
         public async Task<List<BluetoothDeviceModel>> GetConnectedDevicesAsync()
         {
             var devices = new List<BluetoothDeviceModel>();
@@ -47,10 +55,14 @@ namespace BluetoothBatteryMonitor.Services
                             battery = await GetBatteryLevelAsync(device);
                         }
 
+                        var originalName = devInfo.Name;
+                        var displayName = _nameService.GetDisplayName(devInfo.Id, originalName);
+
                         devices.Add(new BluetoothDeviceModel
                         {
                             Id = devInfo.Id,
-                            Name = devInfo.Name,
+                            Name = displayName,
+                            OriginalName = originalName,
                             IsConnected = isConnected,
                             BatteryLevel = battery,
                             Icon = GetIconForDevice(device.ClassOfDevice),
