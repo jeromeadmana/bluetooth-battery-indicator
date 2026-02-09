@@ -1,0 +1,6 @@
+@BluetoothBatteryMonitor_HostAddress = http://localhost:5183
+
+GET {{BluetoothBatteryMonitor_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

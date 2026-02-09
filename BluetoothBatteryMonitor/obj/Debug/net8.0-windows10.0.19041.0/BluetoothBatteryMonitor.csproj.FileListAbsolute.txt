@@ -1,0 +1,8 @@
+C:\sources\bluetooth-battery-indicator\BluetoothBatteryMonitor\obj\Debug\net8.0-windows10.0.19041.0\BluetoothBatteryMonitor.csproj.AssemblyReference.cache
+C:\sources\bluetooth-battery-indicator\BluetoothBatteryMonitor\obj\Debug\net8.0-windows10.0.19041.0\rpswa.dswa.cache.json
+C:\sources\bluetooth-battery-indicator\BluetoothBatteryMonitor\obj\Debug\net8.0-windows10.0.19041.0\BluetoothBatteryMonitor.GeneratedMSBuildEditorConfig.editorconfig
+C:\sources\bluetooth-battery-indicator\BluetoothBatteryMonitor\obj\Debug\net8.0-windows10.0.19041.0\BluetoothBatteryMonitor.AssemblyInfoInputs.cache
+C:\sources\bluetooth-battery-indicator\BluetoothBatteryMonitor\obj\Debug\net8.0-windows10.0.19041.0\BluetoothBatteryMonitor.AssemblyInfo.cs
+C:\sources\bluetooth-battery-indicator\BluetoothBatteryMonitor\obj\Debug\net8.0-windows10.0.19041.0\BluetoothBatteryMonitor.csproj.CoreCompileInputs.cache
+C:\sources\bluetooth-battery-indicator\BluetoothBatteryMonitor\obj\Debug\net8.0-windows10.0.19041.0\BluetoothBatteryMonitor.MvcApplicationPartsAssemblyInfo.cs
+C:\sources\bluetooth-battery-indicator\BluetoothBatteryMonitor\obj\Debug\net8.0-windows10.0.19041.0\BluetoothBatteryMonitor.MvcApplicationPartsAssemblyInfo.cache
