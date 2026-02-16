@@ -7,6 +7,13 @@ function App() {
   const [error, setError] = useState(null)
   const [editingDevice, setEditingDevice] = useState(null)
   const [newName, setNewName] = useState('')
+  const [showSettings, setShowSettings] = useState(false)
+  const [notificationSettings, setNotificationSettings] = useState({
+    enabled: true,
+    defaultThreshold: 20,
+    snoozeDurationMinutes: 30,
+    deviceThresholds: {}
+  })
 
   const fetchDevices = async () => {
     try {
@@ -59,8 +66,48 @@ function App() {
     setNewName('');
   };
 
+  const fetchNotificationSettings = async () => {
+    try {
+      const response = await fetch('/api/battery/notifications/settings');
+      if (response.ok) {
+        const data = await response.json();
+        setNotificationSettings(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch notification settings:', err);
+    }
+  };
+
+  const updateNotificationSettings = async (newSettings) => {
+    try {
+      const response = await fetch('/api/battery/notifications/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSettings)
+      });
+      if (response.ok) {
+        setNotificationSettings(newSettings);
+      }
+    } catch (err) {
+      console.error('Failed to update notification settings:', err);
+    }
+  };
+
+  const snoozeDevice = async (deviceId) => {
+    try {
+      await fetch('/api/battery/notifications/snooze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId })
+      });
+    } catch (err) {
+      console.error('Failed to snooze device:', err);
+    }
+  };
+
   useEffect(() => {
     fetchDevices();
+    fetchNotificationSettings();
     const interval = setInterval(fetchDevices, 5000); // Poll every 5 seconds
     return () => clearInterval(interval);
   }, []);
@@ -70,9 +117,105 @@ function App() {
       <div className="max-w-5xl mx-auto">
         <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-8">
-            <h1 className="text-4xl font-bold text-white text-center">Bluetooth Battery Monitor</h1>
-            <p className="text-blue-100 text-center mt-2">Real-time battery levels for your devices</p>
+            <div className="flex justify-between items-center">
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold text-white text-center">Bluetooth Battery Monitor</h1>
+                <p className="text-blue-100 text-center mt-2">Real-time battery levels for your devices</p>
+              </div>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="ml-4 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+                title="Notification Settings"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </button>
+            </div>
           </div>
+
+          {showSettings && (
+            <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">Notification Settings</h2>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={notificationSettings.enabled}
+                      onChange={(e) => updateNotificationSettings({
+                        ...notificationSettings,
+                        enabled: e.target.checked
+                      })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                  <span className="text-sm font-medium text-gray-700">
+                    {notificationSettings.enabled ? 'Notifications On' : 'Notifications Off'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                    Alert at:
+                  </label>
+                  <select
+                    value={notificationSettings.defaultThreshold}
+                    onChange={(e) => updateNotificationSettings({
+                      ...notificationSettings,
+                      defaultThreshold: parseInt(e.target.value)
+                    })}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value={5}>5%</option>
+                    <option value={10}>10%</option>
+                    <option value={15}>15%</option>
+                    <option value={20}>20%</option>
+                    <option value={25}>25%</option>
+                    <option value={30}>30%</option>
+                    <option value={40}>40%</option>
+                    <option value={50}>50%</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                    Snooze:
+                  </label>
+                  <select
+                    value={notificationSettings.snoozeDurationMinutes}
+                    onChange={(e) => updateNotificationSettings({
+                      ...notificationSettings,
+                      snoozeDurationMinutes: parseInt(e.target.value)
+                    })}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value={5}>5 min</option>
+                    <option value={15}>15 min</option>
+                    <option value={30}>30 min</option>
+                    <option value={60}>1 hour</option>
+                    <option value={120}>2 hours</option>
+                  </select>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-3">
+                You'll receive a Windows notification when any device's battery drops below the threshold.
+              </p>
+            </div>
+          )}
 
           <div className="p-6">
             {loading && <p className="text-center text-gray-600 py-8">Loading devices...</p>}
@@ -176,17 +319,28 @@ function App() {
                           </div>
                         </td>
                         <td className="px-6 py-5 text-center">
-                          <button
-                            onClick={() => startEdit(device)}
-                            disabled={!device.isConnected}
-                            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                              device.isConnected
-                                ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
-                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            }`}
-                          >
-                            Rename
-                          </button>
+                          <div className="flex gap-2 justify-center">
+                            <button
+                              onClick={() => startEdit(device)}
+                              disabled={!device.isConnected}
+                              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                device.isConnected
+                                  ? 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
+                                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              }`}
+                            >
+                              Rename
+                            </button>
+                            {device.batteryLevel !== null && device.batteryLevel <= notificationSettings.defaultThreshold && device.isConnected && (
+                              <button
+                                onClick={() => snoozeDevice(device.id)}
+                                className="px-3 py-1.5 text-sm font-medium rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors"
+                                title="Snooze notifications for this device"
+                              >
+                                Snooze
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -220,7 +374,7 @@ function App() {
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleRename()}
+                onKeyDown={(e) => e.key === 'Enter' && handleRename()}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter new name"
                 autoFocus

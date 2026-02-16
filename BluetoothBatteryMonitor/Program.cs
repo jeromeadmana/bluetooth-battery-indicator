@@ -5,6 +5,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<BluetoothBatteryMonitor.Services.DeviceNameService>();
+builder.Services.AddSingleton<BluetoothBatteryMonitor.Services.NotificationService>();
 builder.Services.AddSingleton<BluetoothBatteryMonitor.Services.BluetoothService>();
 builder.Services.AddSpaStaticFiles(configuration =>
 {
