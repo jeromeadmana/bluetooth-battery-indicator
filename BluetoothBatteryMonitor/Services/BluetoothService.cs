@@ -158,9 +158,10 @@ namespace BluetoothBatteryMonitor.Services
             }
 
             // Method 3: Try GATT for Bluetooth LE devices
+            BluetoothLEDevice? bleDevice = null;
             try
             {
-                var bleDevice = await BluetoothLEDevice.FromIdAsync(device.DeviceId);
+                bleDevice = await BluetoothLEDevice.FromIdAsync(device.DeviceId);
                 if (bleDevice != null)
                 {
                     Console.WriteLine($"Attempting GATT read for {device.Name} (BLE device)");
@@ -179,18 +180,20 @@ namespace BluetoothBatteryMonitor.Services
                             {
                                 var reader = Windows.Storage.Streams.DataReader.FromBuffer(valueResult.Value);
                                 byte level = reader.ReadByte();
-                                bleDevice.Dispose();
                                 Console.WriteLine($"Battery level for {device.Name} from GATT: {level}%");
                                 return (int)level;
                             }
                         }
                     }
-                    bleDevice.Dispose();
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"GATT read failed for {device.Name}: {ex.Message}");
+            }
+            finally
+            {
+                bleDevice?.Dispose();
             }
 
             Console.WriteLine($"No battery info available for {device.Name}");
