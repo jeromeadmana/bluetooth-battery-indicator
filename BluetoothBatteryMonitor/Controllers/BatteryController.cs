@@ -60,6 +60,16 @@ namespace BluetoothBatteryMonitor.Controllers
         [HttpPost("notifications/settings")]
         public IActionResult UpdateNotificationSettings([FromBody] NotificationSettingsRequest request)
         {
+            if (request.DefaultThreshold < 5 || request.DefaultThreshold > 50)
+            {
+                return BadRequest("Default threshold must be between 5 and 50");
+            }
+
+            if (request.SnoozeDurationMinutes < 5 || request.SnoozeDurationMinutes > 120)
+            {
+                return BadRequest("Snooze duration must be between 5 and 120 minutes");
+            }
+
             var settings = new NotificationSettings
             {
                 Enabled = request.Enabled,
