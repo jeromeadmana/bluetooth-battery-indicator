@@ -200,8 +200,6 @@ namespace BluetoothBatteryMonitor.Services
             return null;
         }
 
-
-
         private async Task<string> GetBluetoothVersionAsync(BluetoothDevice device, DeviceInformation devInfo)
         {
             try
