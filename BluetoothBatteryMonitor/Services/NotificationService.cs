@@ -62,7 +62,13 @@ namespace BluetoothBatteryMonitor.Services
 
         public NotificationSettings GetSettings()
         {
-            return _settings;
+            return new NotificationSettings
+            {
+                Enabled = _settings.Enabled,
+                DefaultThreshold = _settings.DefaultThreshold,
+                SnoozeDurationMinutes = _settings.SnoozeDurationMinutes,
+                DeviceThresholds = new Dictionary<string, int>(_settings.DeviceThresholds)
+            };
         }
 
         public void UpdateSettings(NotificationSettings settings)
