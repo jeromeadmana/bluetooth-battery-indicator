@@ -289,7 +289,7 @@ function App() {
                         key={device.id}
                         className={`border-b transition-colors ${
                           darkMode
-                            ? `border-gray-700 hover:bg-gray-700 ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-750'}`
+                            ? `border-gray-700 hover:bg-gray-700 ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}`
                             : `border-gray-100 hover:bg-blue-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`
                         }`}
                       >
