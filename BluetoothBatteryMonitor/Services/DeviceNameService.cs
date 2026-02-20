@@ -10,6 +10,7 @@ namespace BluetoothBatteryMonitor.Services
     {
         private readonly string _settingsPath;
         private Dictionary<string, string> _customNames;
+        private readonly object _lock = new();
 
         public DeviceNameService()
         {
@@ -52,19 +53,28 @@ namespace BluetoothBatteryMonitor.Services
 
         public string GetDisplayName(string deviceId, string originalName)
         {
-            return _customNames.TryGetValue(deviceId, out var customName) ? customName : originalName;
+            lock (_lock)
+            {
+                return _customNames.TryGetValue(deviceId, out var customName) ? customName : originalName;
+            }
         }
 
         public void SetCustomName(string deviceId, string customName)
         {
-            _customNames[deviceId] = customName;
-            SaveCustomNames();
+            lock (_lock)
+            {
+                _customNames[deviceId] = customName;
+                SaveCustomNames();
+            }
         }
 
         public void RemoveCustomName(string deviceId)
         {
-            _customNames.Remove(deviceId);
-            SaveCustomNames();
+            lock (_lock)
+            {
+                _customNames.Remove(deviceId);
+                SaveCustomNames();
+            }
         }
     }
 }
